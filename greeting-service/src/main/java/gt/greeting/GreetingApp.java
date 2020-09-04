@@ -1,14 +1,12 @@
 package gt.greeting;
 
+import app.model.GreetingOuterClass;
 import app.model.GreetingOuterClass.Greeting;
 import app.model.PersonOuterClass.Person;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pulsar.client.api.Message;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.client.api.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -27,10 +25,17 @@ public class GreetingApp {
     }
 
     @Bean
-    PulsarClient createPularClient() throws PulsarClientException {
+    PulsarClient createPulsarClient() throws PulsarClientException {
         return PulsarClient.builder()
                 .serviceUrl("pulsar://localhost:6650")
                 .build();
+    }
+
+    @Bean
+    Producer<Greeting> greetingProducer(PulsarClient pulsarClient) throws PulsarClientException {
+        return pulsarClient.newProducer(Schema.PROTOBUF(Greeting.class))
+                .topic(greetingTopic)
+                .create();
     }
 
 }
@@ -41,6 +46,7 @@ public class GreetingApp {
 class GreetingService {
 
     final PulsarClient pulsarClient;
+    final Producer<GreetingOuterClass.Greeting> greetingProducer;
 
     @PostConstruct
     private void initConsumer() throws PulsarClientException {
@@ -54,18 +60,13 @@ class GreetingService {
     @SneakyThrows
     private void handleMessage(Message<Person> msg) {
         var p = msg.getValue();
-
         log.info("Received message: to convert {} ", p);
 
         var greeting = Greeting.newBuilder().setGreeting("Hello " + p.getFName() + " " + p.getLName()).build();
 
         //send back to the queue
-        var producer = pulsarClient.newProducer(Schema.PROTOBUF(Greeting.class))
-                .topic(GreetingApp.greetingTopic)
-                .create();
-
         log.info("Sending back converted message {} ", greeting);
-        producer.send(greeting);
+        greetingProducer.send(greeting);
     }
 
 

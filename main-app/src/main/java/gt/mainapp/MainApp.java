@@ -1,7 +1,6 @@
 package gt.mainapp;
 
 import app.model.GreetingOuterClass.Greeting;
-import app.model.PersonOuterClass;
 import app.model.PersonOuterClass.Person;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -37,8 +36,8 @@ public class MainApp {
     }
 
     @Bean
-    Producer<PersonOuterClass.Person> personProducer(PulsarClient pulsarClient) throws PulsarClientException {
-        return pulsarClient.newProducer(Schema.PROTOBUF(PersonOuterClass.Person.class))
+    Producer<Person> personProducer(PulsarClient pulsarClient) throws PulsarClientException {
+        return pulsarClient.newProducer(Schema.PROTOBUF(Person.class))
                 .topic(personTopic)
                 .create();
     }
@@ -50,7 +49,7 @@ public class MainApp {
 class AppController {
 
     final PulsarClient pulsarClient;
-    final Producer<PersonOuterClass.Person> personProducer;
+    final Producer<Person> personProducer;
 
     @PostConstruct
     private void initConsumer() throws PulsarClientException {
@@ -58,24 +57,27 @@ class AppController {
                 .newConsumer(Schema.PROTOBUF(Greeting.class))
                 .topic(MainApp.greetingTopic)
                 .subscriptionName("subscription-2")
-                .messageListener((consumer, msg) -> log.info("Received greeting message: {}", msg.getValue().getGreeting())).subscribe();
+                .messageListener((consumer, msg) -> {
+
+                    //message handler logic
+
+                })
+                .subscribe();
+
     }
 
     @GetMapping("/greet/{fName}/{lName}")
     @SneakyThrows
-    void addMessage(@PathVariable String fName, @PathVariable String lName) {
+    String addMessage(@PathVariable String fName, @PathVariable String lName) {
         var person = Person.newBuilder()
                 .setFName(fName)
                 .setLName(lName)
                 .build();
 
-        var producer = pulsarClient.newProducer(Schema.PROTOBUF(Person.class))
-                .topic(MainApp.personTopic)
-                .create();
-
         log.info("Publishing to topic to convert");
+        personProducer.send(person);
 
-        producer.send(person);
+        return person + " is published to topic";
     }
 
 }
