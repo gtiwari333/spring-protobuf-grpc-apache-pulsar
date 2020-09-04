@@ -5,3 +5,5 @@ It consists of two apps `main-app` and `greeting-service`.
 It will be received by another app `greeting-service` which will create a greeting messsage and puts to `greeting-message` topic which will be received by `main-app`.
 
 `protobuf-model` is a common module that contains the Greeting.proto and Person.proto files and `protobuf-maven-plugin` to generate Java classes
+
+Use the script on pulsar-docker.sh to start pulsar instance.
