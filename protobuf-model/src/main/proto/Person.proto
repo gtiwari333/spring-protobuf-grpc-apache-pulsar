@@ -1,0 +1,6 @@
+syntax = "proto3";
+package app.model;
+message Person {
+  string fName = 1;
+  string lName = 2;
+}
